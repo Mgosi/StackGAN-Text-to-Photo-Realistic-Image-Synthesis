@@ -7,6 +7,9 @@ Original file is located at
     https://colab.research.google.com/github/Mgosi/StackGAN-Text-to-Photo-Realistic-Image-Synthesis/blob/master/models.ipynb
 """
 
+
+# add logits
+
 import torch
 import torch.nn as nn
 from initValues import config
