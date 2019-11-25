@@ -20,7 +20,46 @@ class GanHelper():
             if m.bias is not None:
                 nn.init.constant_(m.bias.data, 0)
 
+    def computeGenLoss(netD, fakeImgs, realLabels, conditions):
+        criterion = nn.BCELoss()
+        cond = conditions.detach()
+        fakeFeatures = netD(fakeImgs)
+        inputs = (fakeFeatures, cond)
+        fakeLogits = netD.getCondLogits(inputs)
+        errD_Fake = criterion(fakeLogits, realLabels)
 
+        return errD_Fake
+
+    def computeDisLoss(netD, fakeImgs, realImgs, fakeLabels, realLabels, conditions):
+        criterion = nn.BCELoss()
+        cond = conditions.detach()
+        fakeImgs = fakeImgs.detach()
+        batchSize = realImgs.size(0)
+        realFeatures = netD(realImgs)
+        fakeFeatures = netD(fakeImgs)
+
+        inputs = (realFeatures, cond)
+        realLogits = netD.getCondLogits(inputs)
+        errD_Real = criterion(realLogits, realLabels)
+
+        inputs = (realFeatures[: (batchSize - 1)], cond[1:])
+        wrongLogits = netD.getCondLogits(inputs)
+        errD_Wrong = criterion(wrongLogits, fakeLabels[1:])
+
+        inputs = (fakeFeatures, cond)
+        fakeLogits = netD.getCondLogits(inputs)
+        errD_Fake = criterion(fakeLogits, fakeLabels)
+
+        errD = errD_Real + (errD_Fake + errD_Wrong) * 0.5
+
+        return errD, errD_Real.data[0], errD_Fake.data[0], errD_Wrong.data[0]
+
+    def KLLoss(mu, logvar):
+        # -0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+        temp = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
+        KLD = torch.mean(temp).mul_(-0.5)
+        return KLD
+        
 #   def getTrainTestData(self):
 #     transform = transforms.Compose(
 #       [transforms.ToTensor(),
@@ -71,9 +110,9 @@ class GanHelper():
         plt.legend()
         plt.show()
     
-    def saveModel(self, netG, netD, pathG, pathD):
-        torch.save(netG.state_dict(), pathG)
-        torch.save(netD.state_dict(), pathD)
+    def saveModel(self, netG, netD, path, epoch):
+        torch.save(netG.state_dict(), '%s/netGEpoch%d.pth' % (path, epoch))
+        torch.save(netD.state_dict(), path+"/netDLast.pth")
         
     # def loadModel(self, path, generator = True):
     #     device = torch.device("cuda")
