@@ -15,10 +15,10 @@ import torch.nn as nn
 from initValues import config
 
 print(torch.cuda.is_available())
-def conv3x3(in_planes, out_planes, stride=1):
-    "3x3 convolution with padding"
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
+# def conv3x3(in_planes, out_planes, stride=1):
+#     "3x3 convolution with padding"
+#     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+#                      padding=1, bias=False)
 
 class ConBlock(nn.Module):
   def __init__(self, inpC, outC, kernel_size = 4, stride = 2, padding = 1, bias = False, BN = True, leaky = False):
@@ -35,14 +35,14 @@ class ConBlock(nn.Module):
     if self.BN:
       out = self.batchNorm(out)
     out = self.leakyRelu(out) if self.leaky else self.relu(out)
-    return out6
+    return out
 
 # Upsale the spatial size by a factor of 2
 def upBlock(inPlanes, outPlanes):
     block = nn.Sequential(
         nn.Upsample(scale_factor=2, mode='nearest'),
         ConBlock(inPlanes, outPlanes, kernel_size = 3, stride = 1)
-        # conv3x3(in_planes, out_planes),
+        # conv3x3(in_planes, ou t_planes),
         # nn.BatchNorm2d(out_planes),
         # nn.ReLU(True))
     )
@@ -67,15 +67,15 @@ class getLogits(nn.Module):
         nn.Sigmoid()
       )
   
-  def forward(self, hCode, cCode=None):
-    if self.bCondition and cCode is not None:
-      cCode = cCode.view(-1, self.efDim, 1, 1)
-      cCode = cCode.repeat(1, 1, 4, 4)
-      hcCode = torch.cat((hCode, cCode), 1)
+  def forward(self, inpH, inpC=None):
+    if self.bCondition and inpC is not None:
+      inpC = inpC.view(-1, self.efDim, 1, 1)
+      inpC = inpC.repeat(1, 1, 4, 4)
+      inpHC = torch.cat((inpH, inpC), 1)
     else:
-      hcCode = hCode
+      inpHC = inpH
 
-    out = self.logits(hcCode)
+    out = self.logits(inpHC)
     return out.view(-1)
 
 
@@ -87,7 +87,7 @@ class ResBlock(nn.Module):
             # conv3x3(channel_num, channel_num),
             # nn.BatchNorm2d(channel_num),
             # nn.ReLU(True),
-            conv3x3(channelNum, channelNum),
+            ConBlock(channelNum, channelNum, kernel_size=3, stride=1, leaky=False),
             nn.BatchNorm2d(channelNum))
         self.relu = nn.ReLU(inplace=True)
 
@@ -101,15 +101,15 @@ class ResBlock(nn.Module):
 class CA_NET(nn.Module):
   def __init__(self):
     super(CA_NET,self).__init__()
-    self.t_dim = config.TEXT.DIMENSION
-    self.c_dim = config.GAN.CONDITION_DIM
-    self.fc = nn.Linear(self.t_dim, self.c_dim * 2, bias=True)
+    self.tDim = config.TEXT.DIMENSION
+    self.cDim = config.GAN.CONDITION_DIM
+    self.fc = nn.Linear(self.tDim, self.cDim * 2, bias=True)
     self.relu = nn.ReLU()
 
   def encode(self, text_embedding):
     x = self.relu(self.fc(text_embedding))
-    mu = x[:, :self.c_dim]
-    logvar = x[:, self.c_dim:]
+    mu = x[:, :self.cDim]
+    logvar = x[:, self.cDim:]
     return mu, logvar
 
   def reparametrize(self, mu, logvar):
@@ -123,8 +123,8 @@ class CA_NET(nn.Module):
 
   def forward(self, text_embedding):
      mu, logvar = self.encode(text_embedding)
-     c_code = self.reparametrize(mu, logvar)
-     return c_code, mu, logvar
+     condEmb = self.reparametrize(mu, logvar)
+     return condEmb, mu, logvar
 
 
 class Stage1_Gen(nn.Module):
@@ -162,14 +162,14 @@ class Stage1_Gen(nn.Module):
     )
   
   def forward(self, textEmbedding, noise):
-    cCode , mu, logvar = self.caNet(textEmbedding)
-    zCCode = torch.cat((noise, cCode), 1)
-    hCode = self.net(zCCode)
+    condEmb , mu, logvar = self.caNet(textEmbedding)
+    zCondEmb = torch.cat((noise, condEmb), 1)
+    catImgEmb = self.net(zCondEmb)
  
-    hCode = hCode.view(-1, self.gfDim, 4, 4)
-    hCode = self.upSam(hCode)
+    catImgEmb = catImgEmb.view(-1, self.gfDim, 4, 4)
+    catImgEmb = self.upSam(catImgEmb)
 
-    fakeImg = self.img(hCode)
+    fakeImg = self.img(catImgEmb)
     return None, fakeImg, mu, logvar
 
 class Stage1_Dis(nn.Module):
@@ -251,16 +251,16 @@ class Stage2_Gen(nn.Module):
     stage1_Img = stage1_Img.detach()
     encodedImg = self.encoder(stage1_Img)
 
-    cCode , mu, logvar = self.caNet(textEmbedding)
-    cCode = cCode.view(-1, self.efDim, 1, 1)
-    cCode = cCode.repeat(1, 1, 16, 16)
-    icCode = torch.cat([encodedImg, cCode], 1)
-    hCode = self.hrJoint(icCode)
-    hCode = self.residual(hCode)
+    condEmb , mu, logvar = self.caNet(textEmbedding)
+    condEmb = condEmb.view(-1, self.efDim, 1, 1)
+    condEmb = condEmb.repeat(1, 1, 16, 16)
+    catImgEmb = torch.cat([encodedImg, condEmb], 1)
+    catImgEmb = self.hrJoint(catImgEmb)
+    catImgEmb = self.residual(catImgEmb)
 
-    hCode = self.upSam(hCode)
+    catImgEmb = self.upSam(catImgEmb)
 
-    fakeImg = self.img(hCode)
+    fakeImg = self.img(catImgEmb)
     return stage1_Img, fakeImg, mu, logvar
 
 class Stage2_Dis(nn.Module):
