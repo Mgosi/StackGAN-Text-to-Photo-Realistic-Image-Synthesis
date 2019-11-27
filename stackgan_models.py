@@ -20,9 +20,9 @@ def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
-class ConvBlock(nn.Module):
+class ConBlock(nn.Module):
   def __init__(self, inpC, outC, kernel_size = 4, stride = 2, padding = 1, bias = False, BN = True, leaky = False):
-    super(ConvBlock, self).__init__()
+    super(ConBlock, self).__init__()
     self.BN = BN
     self.leaky = leaky
     self.conv = nn.Conv2d(inpC, outC, kernel_size, stride, padding, bias)
@@ -35,13 +35,13 @@ class ConvBlock(nn.Module):
     if self.BN:
       out = self.batchNorm(out)
     out = self.leakyRelu(out) if self.leaky else self.relu(out)
-    return out
+    return out6
 
 # Upsale the spatial size by a factor of 2
 def upBlock(inPlanes, outPlanes):
     block = nn.Sequential(
         nn.Upsample(scale_factor=2, mode='nearest'),
-        ConvBlock(inPlanes, outPlanes, kernel_size = 3, stride = 1)
+        ConBlock(inPlanes, outPlanes, kernel_size = 3, stride = 1)
         # conv3x3(in_planes, out_planes),
         # nn.BatchNorm2d(out_planes),
         # nn.ReLU(True))
@@ -49,7 +49,7 @@ def upBlock(inPlanes, outPlanes):
     return block
 
 class getLogits(nn.Module):
-  def __init__(self, ndf, nef, bCondition=Truel):
+  def __init__(self, ndf, nef, bCondition=True):
     super(getLogits, self).__init__()
     self.dfDim = ndf
     self.efDim = nef
@@ -57,13 +57,13 @@ class getLogits(nn.Module):
 
     if bCondition:
       self.logits = nn.Sequential(
-        ConvBlock(ndf * 8 + nef, ndf * 8, kernel_size=3, stride=1, leaky=True),
-        ConvBLock(ndf * 8, 1, stride=4, BN = False),
+        ConBlock(ndf * 8 + nef, ndf * 8, kernel_size=3, stride=1, leaky=True),
+        ConBlock(ndf * 8, 1, stride=4, BN = False),
         nn.Sigmoid()
       )
     else:
       self.logits = nn.Sequential(
-        ConvBLock(ndf * 8, 1, stride=4, BN = False),
+        ConBlock(ndf * 8, 1, stride=4, BN = False),
         nn.Sigmoid()
       )
   
@@ -83,7 +83,7 @@ class ResBlock(nn.Module):
     def __init__(self, channelNum):
         super(ResBlock, self).__init__()
         self.block = nn.Sequential(
-            ConvBlock(channelNum, channelNum, kernel_size=3, stride=1),
+            ConBlock(channelNum, channelNum, kernel_size=3, stride=1),
             # conv3x3(channel_num, channel_num),
             # nn.BatchNorm2d(channel_num),
             # nn.ReLU(True),
@@ -165,7 +165,7 @@ class Stage1_Gen(nn.Module):
     cCode , mu, logvar = self.caNet(textEmbedding)
     zCCode = torch.cat((noise, cCode), 1)
     hCode = self.net(zCCode)
-
+ 
     hCode = hCode.view(-1, self.gfDim, 4, 4)
     hCode = self.upSam(hCode)
 
@@ -183,13 +183,13 @@ class Stage1_Dis(nn.Module):
     ndf, nef = self.dfDim, self.efDim
 
     self.encodeImg = nn.Sequential(
-        ConvBlock(3, ndf, BN=False, leaky = True),
+        ConBlock(3, ndf, BN=False, leaky = True),
         #(ndf) x 32 x 32
-        ConvBlock(ndf, ndf*2, leaky = True),
+        ConBlock(ndf, ndf*2, leaky = True),
         #(ndf*2) x 16 x 16
-        ConvBlock(ndf*2, ndf * 4, leaky = True),
+        ConBlock(ndf*2, ndf * 4, leaky = True),
         #(ndf*4) x 8 x 8
-        ConvBlock(ndf * 4, ndf * 8, leaky = True)
+        ConBlock(ndf * 4, ndf * 8, leaky = True)
         #(ndf*8) x 4 x 4
     )
 
@@ -223,13 +223,13 @@ class Stage2_Gen(nn.Module):
     self.caNet = CA_NET()
 
     self.encoder = nn.Sequential(
-        ConvBlock(3, ngf, kernel_size=3, stride = 1, BN = False),
-        ConvBlock(ngf, ngf * 2),
-        ConvBlock(ngf * 2, ngf * 4)
+        ConBlock(3, ngf, kernel_size=3, stride = 1, BN = False),
+        ConBlock(ngf, ngf * 2),
+        ConBlock(ngf * 2, ngf * 4)
     )
 
     self.hrJoint = nn.Sequential(
-        ConvBlock(self.efDim + ngf * 4, ngf * 4, kernel_size = 3, stride = 1)
+        ConBlock(self.efDim + ngf * 4, ngf * 4, kernel_size = 3, stride = 1)
     )
 
     self.residual = self._make_layer(ResBlock, ngf * 4)
@@ -273,27 +273,26 @@ class Stage2_Dis(nn.Module):
   def defineModel(self):
     ndf, nef = self.dfDim, self.efDim
     self.encodeImg = nn.Sequential(
-        ConvBlock(3, ndf, BN = False, leaky = True),
+        ConBlock(3, ndf, BN = False, leaky = True),
         #128 * 128 * (ndf)
-        ConvBlock(ndf, ndf * 2, leaky = True),
+        ConBlock(ndf, ndf * 2, leaky = True),
         #64 x 64 x (ndf*2)
-        ConvBlock(ndf * 2, ndf * 4, leaky = True),
+        ConBlock(ndf * 2, ndf * 4, leaky = True),
         #32 x 32 x (ndf*4)
-        ConvBlock(ndf * 4, ndf * 8, leaky = True),
+        ConBlock(ndf * 4, ndf * 8, leaky = True),
         #16 x 16 x (ndf*8)
-        ConvBlock(ndf * 8, ndf * 16, leaky = True),
+        ConBlock(ndf * 8, ndf * 16, leaky = True),
         #8 x 8 x (ndf*16)
-        ConvBlock(ndf * 16, ndf * 32, leaky = True),
+        ConBlock(ndf * 16, ndf * 32, leaky = True),
         #4 x 4 x (ndf*32)
-
-        ConvBlock(ndf * 32, ndf * 16, kernel_size = 3, stride=1, leaky = True),
+        ConBlock(ndf * 32, ndf * 16, kernel_size = 3, stride=1, leaky = True),
         #4 x 4 x ndf * 16
-        ConvBlock(ndf * 16, ndf * 8, kernel_size = 3, stride=1, leaky = True)
+        ConBlock(ndf * 16, ndf * 8, kernel_size = 3, stride=1, leaky = True)
         #4 x 4 x ndf x 8
     )
 
-    self.condLogits = getLogits(ndf, nef, bcondition = True)
-    self.uncondLogits = getLogits(ndf, nef, bcondition = False)
+    self.condLogits = getLogits(ndf, nef)
+    self.uncondLogits = getLogits(ndf, nef, bCondition = False)
 
   def forward(self, image):
     imgEmbedding = self.encodeImg(image)
