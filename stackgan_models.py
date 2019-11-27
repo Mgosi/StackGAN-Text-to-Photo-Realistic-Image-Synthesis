@@ -20,6 +20,22 @@ def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
+class ConvBlock(nn.Module):
+  def __init__(self, inpC, outC, kernel_size = 4, stride = 2, padding = 1, bias = False, BN = True, leaky = False):
+    super(ConvBlock, self).__init__()
+    self.BN = BN
+    self.leaky = leaky
+    self.conv = nn.Conv2d(inpC, outC, kernel_size, stride, padding, bias)
+    self.batchNorm = nn.BatchNorm2d(outC)
+    self.relu = nn.ReLU(inplace=True)
+    self.leakyRelu = nn.LeakyReLU(0.2, inplace = True)
+
+  def forward(self, x):
+    out = self.conv(x)
+    if self.BN:
+      out = self.batchNorm(out)
+    out = self.leakyRelu(out) if self.leaky else self.relu(out)
+    return out
 
 # Upsale the spatial size by a factor of 2
 def upBlock(inPlanes, outPlanes):
@@ -31,6 +47,36 @@ def upBlock(inPlanes, outPlanes):
         # nn.ReLU(True))
     )
     return block
+
+class getLogits(nn.Module):
+  def __init__(self, ndf, nef, bCondition=Truel):
+    super(getLogits, self).__init__()
+    self.dfDim = ndf
+    self.efDim = nef
+    self.bCondition = bCondition
+
+    if bCondition:
+      self.logits = nn.Sequential(
+        ConvBlock(ndf * 8 + nef, ndf * 8, kernel_size=3, stride=1, leaky=True),
+        ConvBLock(ndf * 8, 1, stride=4, BN = False),
+        nn.Sigmoid()
+      )
+    else:
+      self.logits = nn.Sequential(
+        ConvBLock(ndf * 8, 1, stride=4, BN = False),
+        nn.Sigmoid()
+      )
+  
+  def forward(self, hCode, cCode=None):
+    if self.bCondition and cCode is not None:
+      cCode = cCode.view(-1, self.efDim, 1, 1)
+      cCode = cCode.repeat(1, 1, 4, 4)
+      hcCode = torch.cat((hCode, cCode), 1)
+    else:
+      hcCode = hCode
+
+    out = self.logits(hcCode)
+    return out.view(-1)
 
 
 class ResBlock(nn.Module):
@@ -125,23 +171,6 @@ class Stage1_Gen(nn.Module):
 
     fakeImg = self.img(hCode)
     return None, fakeImg, mu, logvar
-
-class ConvBlock(nn.Module):
-  def __init__(self, inpC, outC, kernel_size = 4, stride = 2, padding = 1, bias = False, BN = True, leaky = False):
-    super(ConvBlock, self).__init__()
-    self.BN = BN
-    self.leaky = leaky
-    self.conv = nn.Conv2d(inpC, outC, kernel_size, stride, padding, bias)
-    self.batchNorm = nn.BatchNorm2d(outC)
-    self.relu = nn.ReLU(inplace=True)
-    self.leakyRelu = nn.LeakyReLU(0.2, inplace = True)
-
-  def forward(self, x):
-    out = self.conv(x)
-    if self.BN:
-      out = self.batchNorm(out)
-    out = self.leakyRelu(out) if self.leaky else self.relu(out)
-    return out
 
 class Stage1_Dis(nn.Module):
   def __init__(self):
@@ -263,8 +292,8 @@ class Stage2_Dis(nn.Module):
         #4 x 4 x ndf x 8
     )
 
-    # self.getCondLogits = D_GetLogits(ndf, nef, bcondition = True)
-    # self.getUnCondLogits = D_GetLogits(ndf, nef, bcondition = False)
+    self.condLogits = getLogits(ndf, nef, bcondition = True)
+    self.uncondLogits = getLogits(ndf, nef, bcondition = False)
 
   def forward(self, image):
     imgEmbedding = self.encodeImg(image)
