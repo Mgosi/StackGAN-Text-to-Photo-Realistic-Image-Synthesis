@@ -20,7 +20,7 @@ class GanHelper():
             if m.bias is not None:
                 nn.init.constant_(m.bias.data, 0)
 
-    def computeGenLoss(netD, fakeImgs, realLabels, conditions):
+    def computeGenLoss(self, netD, fakeImgs, realLabels, conditions):
         criterion = nn.BCELoss()
         cond = conditions.detach()
         fakeFeatures = netD(fakeImgs)
@@ -30,7 +30,7 @@ class GanHelper():
 
         return errD_Fake
 
-    def computeDisLoss(netD, fakeImgs, realImgs, fakeLabels, realLabels, conditions):
+    def computeDisLoss(self, netD, fakeImgs, realImgs, fakeLabels, realLabels, conditions):
         criterion = nn.BCELoss()
         cond = conditions.detach()
         fakeImgs = fakeImgs.detach()
@@ -54,7 +54,7 @@ class GanHelper():
 
         return errD, errD_Real.data[0], errD_Fake.data[0], errD_Wrong.data[0]
 
-    def KLLoss(mu, logvar):
+    def KLLoss(self, mu, logvar):
         # -0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
         temp = mu.pow(2).add_(logvar.exp()).mul_(-1).add_(1).add_(logvar)
         KLD = torch.mean(temp).mul_(-0.5)

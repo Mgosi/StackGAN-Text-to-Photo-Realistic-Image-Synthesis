@@ -25,3 +25,4 @@ var.TRAIN.GEN_LR = 0.0002
 var.Z_DIM = 100
 var.IMG_SIZE = 64
 var.CUDA = True
+var.DEVICE = 'cpu'

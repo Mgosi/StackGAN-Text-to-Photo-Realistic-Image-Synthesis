@@ -82,13 +82,13 @@ def load_dataset(f_path, cid_path, direc, emb_path, imgSize):
 
 # Loading training and testing datasets
 
-X_train, y_train, embd_train = load_dataset(f_path='birds/train/filenames.pickle',
-                                            cid_path='birds/train/class_info.pickle',
-                                            direc='birds/CUB_200_2011/CUB_200_2011/',
-                                            emb_path='birds/train/char-CNN-RNN-embeddings.pickle',
-                                            imgSize=(64,64))
+# X_train, y_train, embd_train = load_dataset(f_path='birds/train/filenames.pickle',
+#                                             cid_path='birds/train/class_info.pickle',
+#                                             direc='birds/CUB_200_2011/CUB_200_2011/',
+#                                             emb_path='birds/train/char-CNN-RNN-embeddings.pickle',
+#                                             imgSize=(64,64))
 
-X_test, y_test, embd_test = load_dataset(f_path='birds/test/filenames.pickle',
-                                         cid_path='birds/test/class_info.pickle', 
-                                         direc='birds/CUB_200_2011/CUB_200_2011/', 
-                                         emb_path='birds/test/char-CNN-RNN-embeddings.pickle', imgSize=(64,64))
+# X_test, y_test, embd_test = load_dataset(f_path='birds/test/filenames.pickle',
+#                                          cid_path='birds/test/class_info.pickle', 
+#                                          direc='birds/CUB_200_2011/CUB_200_2011/', 
+#                                          emb_path='birds/test/char-CNN-RNN-embeddings.pickle', imgSize=(64,64))

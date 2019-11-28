@@ -12,7 +12,7 @@ class Trainer(object):
         self.modelDir = os.path.join(outDir, 'Model')
         self.imageDir = os.path.join(outDir, 'Image')
         self.logDir = os.path.join(outDir, 'Log')
-        self.logDir = os.path.join(self.logDir, self.currentTime))
+        self.logDir = os.path.join(self.logDir, self.currentTime)
         os.makedirs(self.modelDir)
         os.makedirs(self.imageDir)
         os.makedirs(self.logDir)
@@ -34,7 +34,7 @@ class Trainer(object):
         netD.apply(self.helper.weightsInit())
         print(netD)
 
-        if config.cuda:
+        if config.CUDA:
             netG.cuda()
             netD.cuda()
 
@@ -51,7 +51,7 @@ class Trainer(object):
         netD.apply(self.helper.weightsInit())
         print(netD)
 
-        if config.cuda:
+        if config.CUDA:
             netG.cuda()
             netD.cuda()
 
@@ -94,14 +94,14 @@ class Trainer(object):
                 
                 #Updatae D Network
                 netD.zero_grad()
-                errD, errD_Real, errD_Fake, errD_Wrong = computeDisLoss(netD, fakeImgs, realImg, fakeLabel, realLabel, fakeMu)
+                errD, errD_Real, errD_Fake, errD_Wrong = self.helper.computeDisLoss(netD, fakeImgs, realImg, fakeLabel, realLabel, fakeMu)
                 errD.backward()
                 optimizerD.step()
 
                 #Update G Network
                 netG.zero_grad()
-                errG = computeGenLoss(netD, fakeImgs, realLabel, fakeMu)
-                klLoss = KLLoss(fakeMu, fakeLogvar)
+                errG = self.helper.computeGenLoss(netD, fakeImgs, realLabel, fakeMu)
+                klLoss = self.helper.KLLoss(fakeMu, fakeLogvar)
                 errG_Total = errG + klLoss * config.TRAIN.COEFF.KL
                 errG_Total.backward()
                 optimizerG.step()
@@ -121,7 +121,10 @@ class Trainer(object):
 
             endTime = time.time()
             print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t'
-                   % (epoch, numEpochs, errD.item(), errG.item())
+                   % (epoch, self.maxEpoch, errD.item(), errG.item()))
 
-        self.helper.saveModel(netG, netD, self.modelDir)
+        self.helper.saveModel(netG, netD, self.modelDir, epoch)
         self.summaryWriter.close()
+
+x = Trainer("./")
+x.loadStage2()
