@@ -24,8 +24,8 @@ class GanHelper():
         criterion = nn.BCELoss()
         cond = conditions.detach()
         fakeFeatures = netD(fakeImgs)
-        inputs = (fakeFeatures, cond)
-        fakeLogits = netD.getCondLogits(inputs)
+        # inputs = (fakeFeatures, cond)
+        fakeLogits = netD.getCondLogits(fakeFeatures, cond)
         errD_Fake = criterion(fakeLogits, realLabels)
 
         return errD_Fake
@@ -38,21 +38,24 @@ class GanHelper():
         realFeatures = netD(realImgs)
         fakeFeatures = netD(fakeImgs)
 
-        inputs = (realFeatures, cond)
-        realLogits = netD.getCondLogits(inputs)
+        # inputs = (realFeatures, cond)
+        realLogits = netD.getCondLogits(realFeatures, cond)
         errD_Real = criterion(realLogits, realLabels)
 
-        inputs = (realFeatures[: (batchSize - 1)], cond[1:])
-        wrongLogits = netD.getCondLogits(inputs)
+        # inputs = (realFeatures[: (batchSize - 1)], cond[1:])
+        wrongLogits = netD.getCondLogits(realFeatures[: (batchSize - 1)], cond[1:])
         errD_Wrong = criterion(wrongLogits, fakeLabels[1:])
 
-        inputs = (fakeFeatures, cond)
-        fakeLogits = netD.getCondLogits(inputs)
+        # inputs = (fakeFeatures, cond)
+        fakeLogits = netD.getCondLogits(fakeFeatures, cond)
         errD_Fake = criterion(fakeLogits, fakeLabels)
 
         errD = errD_Real + (errD_Fake + errD_Wrong) * 0.5
 
-        return errD, errD_Real.data[0], errD_Fake.data[0], errD_Wrong.data[0]
+        # print (errD, errD_Real, errD_Fake, errD_Wrong)
+        # print("Break")
+        # print (errD, errD_Real.data, errD_Fake.data, errD_Wrong.data)
+        return errD, errD_Real.data, errD_Fake.data, errD_Wrong.data
 
     def KLLoss(self, mu, logvar):
         # -0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)

@@ -61,15 +61,17 @@ class BirdDataset(data.Dataset):
             x1 = np.maximum(0, center_x - R)
             x2 = np.minimum(wid, center_x + R)
             img = img.crop([x1, y1, x2, y2])
-        img.resize(size)
+        img.resize(size, Image.BILINEAR)
+        if self.transform is not None:
+            img = self.transform(img)
         return img
 
     def __getitem__(self, index):
         fileName = self.filenames[index]
         bb=self.boundingBoxes[fileName]
 
-        imgName = '{}/images/{}.jpg'.format(direc, filename)
-        img = self.loadImage(imgName, bb, imgSize)
+        imgName = '{}/images/{}.jpg'.format(self.dataDir, fileName)
+        img = self.loadImage(imgName, bb, self.imgSize)
         
         embValues = self.embeddings[index, :, :]
 

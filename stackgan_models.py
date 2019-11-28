@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from initValues import config
+from torch.autograd import Variable
 
 print(torch.cuda.is_available())
 # def conv3x3(in_planes, out_planes, stride=1):
@@ -13,7 +14,7 @@ class ConBlock(nn.Module):
     super(ConBlock, self).__init__()
     self.BN = BN
     self.leaky = leaky
-    self.conv = nn.Conv2d(inpC, outC, kernel_size, stride, padding, bias)
+    self.conv = nn.Conv2d(inpC, outC, kernel_size= kernel_size, stride = stride, padding = padding, bias = bias)
     self.batchNorm = nn.BatchNorm2d(outC)
     self.relu = nn.ReLU(inplace=True)
     self.leakyRelu = nn.LeakyReLU(0.2, inplace = True)
@@ -76,7 +77,8 @@ class ResBlock(nn.Module):
             # nn.BatchNorm2d(channel_num),
             # nn.ReLU(True),
             ConBlock(channelNum, channelNum, kernel_size=3, stride=1, leaky=False),
-            nn.BatchNorm2d(channelNum))
+            #nn.BatchNorm2d(channelNum)
+        )
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
@@ -103,10 +105,11 @@ class CA_NET(nn.Module):
   def reparametrize(self, mu, logvar):
     std = logvar.mul(0.5).exp_()
     if config.CUDA:
-      eps = torch.cuda.FloatTensor(std.size(), requires_grad = True).normal_()
+      eps = torch.cuda.FloatTensor(std.size()).normal_()
       #torch.cuda.
     else:
-      eps = torch.FloatTensor(std.size(), requires_grad = True).normal_()
+      eps = torch.FloatTensor(std.size()).normal_()
+    eps = Variable(eps)
     return eps.mul(std).add_(mu)
 
   def forward(self, text_embedding):
@@ -134,7 +137,7 @@ class Stage1_Gen(nn.Module):
         nn.ReLU(True)
     )
     self.upSam = nn.Sequential(
-        upBlock(ngf, ngf//2),
+        upBlock(ngf, ngf // 2),
         upBlock(ngf // 2, ngf // 4),
         upBlock(ngf // 4, ngf // 8),
         upBlock(ngf // 8, ngf // 16)
@@ -145,8 +148,8 @@ class Stage1_Gen(nn.Module):
     # self.upSam4 = upBlock(ngf // 8, ngf // 16)
     
     self.img = nn.Sequential(
-        ConBlock(ngf // 16, 3, kernel_size=3, stride=1, BN=False),
-        #conv3x3(ngf // 16, 3),
+        #ConBlock(ngf // 16, 3, kernel_size=3, stride=1, BN=False),
+        nn.Conv2d(ngf // 16, 3, kernel_size=3, stride=1, padding=1, bias=False),
         nn.Tanh()
     )
   
@@ -154,9 +157,19 @@ class Stage1_Gen(nn.Module):
     condEmb , mu, logvar = self.caNet(textEmbedding)
     zCondEmb = torch.cat((noise, condEmb), 1)
     catImgEmb = self.net(zCondEmb)
- 
+    #print(catImgEmb.size())
     catImgEmb = catImgEmb.view(-1, self.gfDim, 4, 4)
+    #print(catImgEmb.size())
+    #print(catImgEmb)
     catImgEmb = self.upSam(catImgEmb)
+    # catImgEmb = self.upSam1(catImgEmb)
+    # print(catImgEmb.size())
+    # catImgEmb = self.upSam2(catImgEmb)
+    # print(catImgEmb.size())
+    # catImgEmb = self.upSam3(catImgEmb)
+    # print(catImgEmb.size())
+    # catImgEmb = self.upSam4(catImgEmb)
+    # print(catImgEmb.size())
 
     fakeImg = self.img(catImgEmb)
     return None, fakeImg, mu, logvar

@@ -5,18 +5,21 @@ from initValues import config
 from helper import GanHelper
 from tensorboard import summary
 import datetime
+from torch.autograd import Variable
 
 class Trainer(object):
     def __init__(self, outDir):
         self.currentTime = str(datetime.datetime.now().timestamp())
-        # self.modelDir = os.path.join(outDir, 'Model')
-        # self.imageDir = os.path.join(outDir, 'Image')
-        # self.logDir = os.path.join(outDir, 'Log')
-        # self.logDir = os.path.join(self.logDir, self.currentTime)
-        # os.makedirs(self.modelDir)
-        # os.makedirs(self.imageDir)
-        # os.makedirs(self.logDir)
-        # self.summaryWriter = summary.create_file_writer(self.logDir)
+        self.modelDir = os.path.join(outDir, 'Model')
+        self.imageDir = os.path.join(outDir, 'Image')
+        self.logDir = os.path.join(outDir, 'Log')
+        self.logDir = os.path.join(self.logDir, self.currentTime)
+
+        os.makedirs(outDir)
+        os.makedirs(self.modelDir)
+        os.makedirs(self.imageDir)
+        os.makedirs(self.logDir)
+        #self.summaryWriter = summary.create_file_writer(self.logDir)
 
         self.maxEpoch = config.TRAIN.MAX_EPOCH
         self.batchSize = config.TRAIN.BATCH_SIZE
@@ -38,7 +41,7 @@ class Trainer(object):
             netG.cuda()
             netD.cuda()
 
-        return netD, netG
+        return netG, netD
 
     def loadStage2(self):
         from stackgan_models import Stage1_Gen, Stage2_Gen, Stage2_Dis
@@ -55,7 +58,7 @@ class Trainer(object):
             netG.cuda()
             netD.cuda()
 
-        return netD, netG
+        return netG, netD
 
     def train(self, loader, stage=1):
         if stage == 1:
@@ -66,13 +69,13 @@ class Trainer(object):
         nz = config.Z_DIM
         batchSize = self.batchSize
         
-        fixedNoise = torch.rand(batchSize, nz, device= self.device).normal_(0,1)    #change
+        fixedNoise = Variable(torch.rand(batchSize, nz, device= self.device).normal_(0,1))    #change
 
-        realLabel = torch.FloatTensor(batchSize).fill_(1)
-        fakeLabel = torch.FloatTensor(batchSize).fill_(0)
+        realLabel = Variable(torch.FloatTensor(batchSize).fill_(1))
+        fakeLabel = Variable(torch.FloatTensor(batchSize).fill_(0))
 
-        genLR = config.TRAIN.GENERATOR_LR
-        disLR = config.TRAIN.DISCRIMINATOR_LR
+        genLR = config.TRAIN.GEN_LR
+        disLR = config.TRAIN.DIS_LR
 
         optimizerD = optim.Adam(netD.parameters(), lr = disLR, betas = (0.5, 0.999))
         optimizerG = optim.Adam(netG.parameters(), lr = genLR, betas = (0.5, 0.999))
@@ -85,12 +88,16 @@ class Trainer(object):
             for i, data in enumerate(loader, 0):
 
                 #Prepare Training Data
-                realImg, textEmbedding = data.to(self.device)
-                noise = torch.rand(batchSize, nz,  device=self.device)
+                realImg, textEmbedding = data
+                realImg = Variable(realImg)
+                textEmbedding = Variable(textEmbedding)
+                # realImg = realImg.to(self.device)
+                noise = Variable(torch.rand(batchSize, nz,  device=self.device).normal_(0,1))
 
                 #Generate Fake Imgs
                 inputs = (textEmbedding, noise)
-                _, fakeImgs, fakeMu, fakeLogvar = netG(inputs)
+                #print(inputs)
+                _, fakeImgs, fakeMu, fakeLogvar = netG(textEmbedding, noise)
                 
                 #Updatae D Network
                 netD.zero_grad()
@@ -98,7 +105,7 @@ class Trainer(object):
                 errD.backward()
                 optimizerD.step()
 
-                #Update G Network
+                # Update G Network
                 netG.zero_grad()
                 errG = self.helper.computeGenLoss(netD, fakeImgs, realLabel, fakeMu)
                 klLoss = self.helper.KLLoss(fakeMu, fakeLogvar)
@@ -107,23 +114,31 @@ class Trainer(object):
                 optimizerG.step()
 
                 iters += 1
+                print(iters)
+                # if iters == 5:
+                #     break
 
-                if iters % 50:
-                    with self.summaryWriter.as_default():
-                        summary.scalar('D_Loss', errD.data[0])
-                        summary.scalar('G_Loss', errG.data[0])
-                        summary.scalar('KL_Loss', klLoss.data[0])
+                # if iters % 50:
+                #     with self.summaryWriter.as_default():
+                #         summary.scalar('D_Loss', errD.data[0])
+                #         summary.scalar('G_Loss', errG.data[0])
+                #         summary.scalar('KL_Loss', klLoss.data[0])
 
-                    inputs = (textEmbedding, fixedNoise)
-                    _, fakeImgs, _, _ = netG(inputs)
+                #     inputs = (textEmbedding, fixedNoise)
+                #     _, fakeImgs, _, _ = netG(inputs)
 
                     #Save Images
+                print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t' % (epoch, self.maxEpoch, errD.item(), errG.item()))
+
+                
 
             endTime = time.time()
-            print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t'
-                   % (epoch, self.maxEpoch, errD.item(), errG.item()))
+            print(endTime)
 
-        self.helper.saveModel(netG, netD, self.modelDir, epoch)
-        self.summaryWriter.close()
+            if epoch == 10:
+                self.helper.saveModel(netG, netD, self.modelDir, epoch)
+        #     print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t'
+        #            % (epoch, self.maxEpoch, errD.item(), errG.item()))
 
-x = Trainer('./')
+        # self.helper.saveModel(netG, netD, self.modelDir, epoch)
+        # self.summaryWriter.close()

@@ -22,6 +22,9 @@ var.TRAIN.MAX_EPOCH = 500
 var.TRAIN.DIS_LR = 0.0002
 var.TRAIN.GEN_LR = 0.0002
 
+var.TRAIN.COEFF = edict()
+var.TRAIN.COEFF.KL = 2.0
+
 var.Z_DIM = 100
 var.IMG_SIZE = 64
 var.CUDA = False
