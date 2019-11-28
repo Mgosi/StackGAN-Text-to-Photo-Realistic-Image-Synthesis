@@ -202,7 +202,7 @@ class Stage2_Gen(nn.Module):
 
   def _make_layer(self, block, channelNum):
     layers = []
-    for i in range(config.GAN.R_NUM):
+    for i in range(config.GAN.RES_NUM):
       layers.append(block(channelNum))
     return nn.Sequential(*layers)
 

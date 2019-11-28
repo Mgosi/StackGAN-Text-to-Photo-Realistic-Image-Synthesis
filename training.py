@@ -9,14 +9,14 @@ import datetime
 class Trainer(object):
     def __init__(self, outDir):
         self.currentTime = str(datetime.datetime.now().timestamp())
-        self.modelDir = os.path.join(outDir, 'Model')
-        self.imageDir = os.path.join(outDir, 'Image')
-        self.logDir = os.path.join(outDir, 'Log')
-        self.logDir = os.path.join(self.logDir, self.currentTime)
-        os.makedirs(self.modelDir)
-        os.makedirs(self.imageDir)
-        os.makedirs(self.logDir)
-        self.summaryWriter = summary.create_file_writer(self.logDir)
+        # self.modelDir = os.path.join(outDir, 'Model')
+        # self.imageDir = os.path.join(outDir, 'Image')
+        # self.logDir = os.path.join(outDir, 'Log')
+        # self.logDir = os.path.join(self.logDir, self.currentTime)
+        # os.makedirs(self.modelDir)
+        # os.makedirs(self.imageDir)
+        # os.makedirs(self.logDir)
+        # self.summaryWriter = summary.create_file_writer(self.logDir)
 
         self.maxEpoch = config.TRAIN.MAX_EPOCH
         self.batchSize = config.TRAIN.BATCH_SIZE
@@ -27,11 +27,11 @@ class Trainer(object):
     def loadStage1(self):
         from stackgan_models import Stage1_Gen, Stage1_Dis
         netG = Stage1_Gen()
-        netG.apply(self.helper.weightsInit())
+        netG.apply(self.helper.weightsInit)
         print (netG)
 
         netD = Stage1_Dis()
-        netD.apply(self.helper.weightsInit())
+        netD.apply(self.helper.weightsInit)
         print(netD)
 
         if config.CUDA:
@@ -44,11 +44,11 @@ class Trainer(object):
         from stackgan_models import Stage1_Gen, Stage2_Gen, Stage2_Dis
         s1_Gen = Stage1_Gen()
         netG = Stage2_Gen(s1_Gen)
-        netG.apply(self.helper.weightsInit())
+        netG.apply(self.helper.weightsInit)
         print (netG)
 
         netD = Stage2_Dis()
-        netD.apply(self.helper.weightsInit())
+        netD.apply(self.helper.weightsInit)
         print(netD)
 
         if config.CUDA:
@@ -126,5 +126,4 @@ class Trainer(object):
         self.helper.saveModel(netG, netD, self.modelDir, epoch)
         self.summaryWriter.close()
 
-x = Trainer("./")
-x.loadStage2()
+x = Trainer('./')
