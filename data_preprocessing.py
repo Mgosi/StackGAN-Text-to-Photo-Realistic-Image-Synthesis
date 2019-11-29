@@ -46,21 +46,21 @@ class BirdDataset(data.Dataset):
             bounding_boxes = df_bb.iloc[i][1:].tolist()
             img_key = file_names[i][:-4]
             dic[img_key]=bounding_boxes
-            
         return dic    
 
     def loadImage(self, imagePath, bound, size):
         img = Image.open(imagePath).convert('RGB')
-        wid, height = img.size
-        if bound is not None:
-            R = int(np.maximum(bound[2], bound[3]) * 0.75)
-            center_x = int((2 * bound[0] + bound[2]) / 2)
-            center_y = int((2 * bound[1] + bound[3]) / 2)
-            y1 = np.maximum(0, center_y - R)
-            y2 = np.minimum(height, center_y + R)
-            x1 = np.maximum(0, center_x - R)
-            x2 = np.minimum(wid, center_x + R)
-            img = img.crop([x1, y1, x2, y2])
+        # wid, height = img.size
+        # if bound is not None:
+        #     R = int(np.maximum(bound[2], bound[3]) * 0.75)
+        #     center_x = int((2 * bound[0] + bound[2]) / 2)
+        #     center_y = int((2 * bound[1] + bound[3]) / 2)
+        #     y1 = np.maximum(0, center_y - R)
+        #     y2 = np.minimum(height, center_y + R)
+        #     x1 = np.maximum(0, center_x - R)
+        #     x2 = np.minimum(wid, center_x + R)
+        #     img = img.crop([x1, y1, x2, y2])
+        # loadSize = int(size[0] * 76 / 64)
         img.resize(size, Image.BILINEAR)
         if self.transform is not None:
             img = self.transform(img)

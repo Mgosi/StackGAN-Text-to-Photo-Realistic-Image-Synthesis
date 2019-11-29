@@ -6,10 +6,13 @@ import torch.utils.data as utils
 import torchvision.transforms as transforms
 import shutil
 
-#shutil.rmtree("Test")
+shutil.rmtree("Test")
 
 imgTransform = transforms.Compose([
-    transforms.RandomCrop(config.IMG_SIZE),
+    #transforms.RandomCrop(config.IMG_SIZE),
+    #transforms.Resize(config.IMG_SIZE),
+    transforms.RandomResizedCrop(config.IMG_SIZE),
+    #transforms.(config.IMG_SIZE),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -23,7 +26,7 @@ dataset = BirdDataset(filePath='./birds/train/filenames.pickle',
                                             transform = imgTransform)
 
 dataLoader = utils.DataLoader(
-    dataset, batch_size=config.TRAIN.BATCH_SIZE, shuffle=True, num_workers=2
+    dataset, batch_size=config.TRAIN.BATCH_SIZE, shuffle=False, num_workers=2
 )
 
 Gan = Trainer("Test")

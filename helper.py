@@ -22,7 +22,7 @@ class GanHelper():
 
     def computeGenLoss(self, netD, fakeImgs, realLabels, conditions):
         criterion = nn.BCELoss()
-        cond = conditions.detach()
+        cond = conditions
         fakeFeatures = netD(fakeImgs)
         # inputs = (fakeFeatures, cond)
         fakeLogits = netD.getCondLogits(fakeFeatures, cond)
@@ -113,6 +113,20 @@ class GanHelper():
         plt.legend()
         plt.show()
     
+    def saveImg(self, imgData, fake, epoch, imgDir):
+        num = config.TRAIN.BATCH_SIZE
+        fake = fake[:num]
+
+        if imgData is not None:
+            imgData = imgData[0:num]
+            vutils.save_image(imgData, '%s/real_images.png' % imgDir, normalize=True)
+        vutils.save_image(fake.data, '%s/fake_samples_epoch_%3d.png' % (imgDir, epoch), normalize=True)
+        
+
+
+
+
+
     def saveModel(self, netG, netD, path, epoch):
         torch.save(netG.state_dict(), '%s/netGEpoch%d.pth' % (path, epoch))
         torch.save(netD.state_dict(), path+"/netDLast.pth")

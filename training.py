@@ -88,8 +88,8 @@ class Trainer(object):
             for i, data in enumerate(loader, 0):
 
                 #Prepare Training Data
-                realImg, textEmbedding = data
-                realImg = Variable(realImg)
+                realImgCPU, textEmbedding = data
+                realImg = Variable(realImgCPU)
                 textEmbedding = Variable(textEmbedding)
                 # realImg = realImg.to(self.device)
                 noise = Variable(torch.rand(batchSize, nz,  device=self.device).normal_(0,1))
@@ -110,7 +110,7 @@ class Trainer(object):
                 errG = self.helper.computeGenLoss(netD, fakeImgs, realLabel, fakeMu)
                 klLoss = self.helper.KLLoss(fakeMu, fakeLogvar)
                 errG_Total = errG + klLoss * config.TRAIN.COEFF.KL
-                errG_Total.backward()
+                errG.backward()
                 optimizerG.step()
 
                 iters += 1
@@ -128,14 +128,17 @@ class Trainer(object):
                 #     _, fakeImgs, _, _ = netG(inputs)
 
                     #Save Images
-                print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t' % (epoch, self.maxEpoch, errD.item(), errG.item()))
 
+                print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t' % (epoch, self.maxEpoch, errD.item(), errG.item()))
+                if iters % 1 == 0:
+                    _, fixedFake, _, _ = netG(textEmbedding, fixedNoise)
+                    self.helper.saveImg(realImgCPU, fixedFake, iters, self.imageDir)
                 
 
             endTime = time.time()
             print(endTime)
 
-            if epoch == 10:
+            if epoch % 10 == 0:
                 self.helper.saveModel(netG, netD, self.modelDir, epoch)
         #     print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t'
         #            % (epoch, self.maxEpoch, errD.item(), errG.item()))
