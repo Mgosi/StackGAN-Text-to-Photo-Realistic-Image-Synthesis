@@ -6,13 +6,10 @@ import torch.utils.data as utils
 import torchvision.transforms as transforms
 import shutil
 
-shutil.rmtree("Test")
+#shutil.rmtree("Output")
 
 imgTransform = transforms.Compose([
-    #transforms.RandomCrop(config.IMG_SIZE),
-    #transforms.Resize(config.IMG_SIZE),
     transforms.RandomResizedCrop(config.IMG_SIZE),
-    #transforms.(config.IMG_SIZE),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -29,6 +26,13 @@ dataLoader = utils.DataLoader(
     dataset, batch_size=config.TRAIN.BATCH_SIZE, shuffle=False, num_workers=2
 )
 
-Gan = Trainer("Test")
+Gan = Trainer("Output")
+#Train on Stage 1
 Gan.train(dataLoader, 1)
+
+#Training on Stage 2
+# Gan.train(dataLoader, 2)
+
+# Gan.sample("SampleOutput S1", 1)
+# Gan.sample("SampleOutput S2", 2)
 

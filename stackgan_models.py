@@ -3,12 +3,6 @@ import torch.nn as nn
 from initValues import config
 from torch.autograd import Variable
 
-print(torch.cuda.is_available())
-# def conv3x3(in_planes, out_planes, stride=1):
-#     "3x3 convolution with padding"
-#     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-#                      padding=1, bias=False)
-
 class ConBlock(nn.Module):
   def __init__(self, inpC, outC, kernel_size = 4, stride = 2, padding = 1, bias = False, BN = True, leaky = False):
     super(ConBlock, self).__init__()
@@ -26,14 +20,11 @@ class ConBlock(nn.Module):
     out = self.leakyRelu(out) if self.leaky else self.relu(out)
     return out
 
-# Upsale the spatial size by a factor of 2
 def upBlock(inPlanes, outPlanes):
     block = nn.Sequential(
         nn.Upsample(scale_factor=2, mode='nearest'),
         ConBlock(inPlanes, outPlanes, kernel_size = 3, stride = 1)
-        # conv3x3(in_planes, ou t_planes),
-        # nn.BatchNorm2d(out_planes),
-        # nn.ReLU(True))
+
     )
     return block
 
@@ -73,11 +64,7 @@ class ResBlock(nn.Module):
         super(ResBlock, self).__init__()
         self.block = nn.Sequential(
             ConBlock(channelNum, channelNum, kernel_size=3, stride=1),
-            # conv3x3(channel_num, channel_num),
-            # nn.BatchNorm2d(channel_num),
-            # nn.ReLU(True),
             ConBlock(channelNum, channelNum, kernel_size=3, stride=1, leaky=False),
-            #nn.BatchNorm2d(channelNum)
         )
         self.relu = nn.ReLU(inplace=True)
 
@@ -130,7 +117,6 @@ class Stage1_Gen(nn.Module):
     inp = self.zDim + self.efDim
     ngf = self.gfDim
     self.caNet = CA_NET()
-
     self.net = nn.Sequential(
         nn.Linear(inp, ngf * 4 * 4, bias = False),
         nn.BatchNorm1d(ngf * 4 * 4),
@@ -142,13 +128,8 @@ class Stage1_Gen(nn.Module):
         upBlock(ngf // 4, ngf // 8),
         upBlock(ngf // 8, ngf // 16)
     )
-    # self.upSam1 = upBlock(ngf, ngf//2)
-    # self.upSam2 = upBlock(ngf // 2, ngf // 4)
-    # self.upSam3 = upBlock(ngf // 4, ngf // 8)
-    # self.upSam4 = upBlock(ngf // 8, ngf // 16)
-    
     self.img = nn.Sequential(
-        #ConBlock(ngf // 16, 3, kernel_size=3, stride=1, BN=False),
+        
         nn.Conv2d(ngf // 16, 3, kernel_size=3, stride=1, padding=1, bias=False),
         nn.Tanh()
     )
@@ -157,20 +138,8 @@ class Stage1_Gen(nn.Module):
     condEmb , mu, logvar = self.caNet(textEmbedding)
     zCondEmb = torch.cat((noise, condEmb), 1)
     catImgEmb = self.net(zCondEmb)
-    #print(catImgEmb.size())
     catImgEmb = catImgEmb.view(-1, self.gfDim, 4, 4)
-    #print(catImgEmb.size())
-    #print(catImgEmb)
     catImgEmb = self.upSam(catImgEmb)
-    # catImgEmb = self.upSam1(catImgEmb)
-    # print(catImgEmb.size())
-    # catImgEmb = self.upSam2(catImgEmb)
-    # print(catImgEmb.size())
-    # catImgEmb = self.upSam3(catImgEmb)
-    # print(catImgEmb.size())
-    # catImgEmb = self.upSam4(catImgEmb)
-    # print(catImgEmb.size())
-
     fakeImg = self.img(catImgEmb)
     return None, fakeImg, mu, logvar
 
