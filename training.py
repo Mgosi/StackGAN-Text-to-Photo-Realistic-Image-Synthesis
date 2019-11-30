@@ -150,14 +150,14 @@ class Trainer(object):
 
                     #Save Images
 
-                print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t' % (epoch, self.maxEpoch, errD.item(), errG.item()))
+                #print('[%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\t' % (epoch, self.maxEpoch, errD.item(), errG.item()))
                 if iters % 100 == 0:
 
-                    print('''[%d][%d/%d] Loss_D:%.4f  Loss_G: %.4f Loss_KL: %.4f
-                     Loss_real: %.4f Loss_wrong:%.4f Loss_fake %.4f
-                     Total Time: sec'''
-                  % (count, i, len(data_loader),
-                     errD.item(), errG.item(), kl_loss.data))
+                #     print('''[%d][%d/%d] Loss_D:%.4f  Loss_G: %.4f Loss_KL: %.4f
+                #      Loss_real: %.4f Loss_wrong:%.4f Loss_fake %.4f
+                #      Total Time: sec'''
+                #   % (count, i, len(data_loader),
+                #      errD.item(), errG.item(), kl_loss.data))
                     
                     genLoss.append(errG.item())
                     disLoss.append(errD.item())
@@ -167,7 +167,7 @@ class Trainer(object):
                 
 
             endTime = time.time()
-            print(endTime)
+            #print(endTime)
 
             if epoch % 10 == 0:
                 self.helper.saveModel(netG, netD, self.modelDir, epoch)
@@ -176,6 +176,3 @@ class Trainer(object):
 
         self.helper.saveModel(netG, netD, self.modelDir, epoch)
         # self.summaryWriter.close()
-
-    # def sample(dataDir, stage=1):
-    #     if
